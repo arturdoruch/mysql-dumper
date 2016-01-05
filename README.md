@@ -1,5 +1,7 @@
 # MySql Dumper
 
+Tool for making mysql database backups with bzip2 compressor.
+
 ### Usage
 
 ```php
