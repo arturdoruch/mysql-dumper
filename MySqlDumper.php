@@ -1,12 +1,11 @@
 <?php
-/**
- * @author Artur Doruch <arturdoruch@interia.pl>
- */
 
 namespace ArturDoruch\Tool\MySqlDumper;
 
 /**
  * Dumps and restores mysql database.
+ *
+ * @author Artur Doruch <arturdoruch@interia.pl>
  */
 class MySqlDumper
 {
