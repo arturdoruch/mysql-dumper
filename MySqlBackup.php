@@ -107,6 +107,4 @@ class MySqlBackup
     {
         return $this->backupDir . DIRECTORY_SEPARATOR . $fileName;
     }
-
 }
- 

@@ -39,16 +39,16 @@ class MySqlDumper
     private $backup;
 
     /**
-     * @param string $host The database host
-     * @param string $name The database name
-     * @param string $user The database user name
-     * @param string $pass The database password
-     * @param string $backupDir The full path to backup directory
-     * @param bool|string $bzip2 If you want to compress dumped sql file with bzip2 compressor pass:
-     *                           - on windows the path to bzip compressor directory,
-     *                           - on linux and other OS true value.
+     * @param string $host           The database host
+     * @param string $name           The database name
+     * @param string $user           The database user name
+     * @param string $pass           The database password
+     * @param string $backupDir      The full path to backup directory
+     * @param bool|string $bzip2Path If you want to compress dumped sql file with bzip2 compressor pass:
+     *                               - on windows the path to bzip compressor directory,
+     *                               - on linux and other OS true value.
      */
-    public function __construct($host, $name, $user, $pass, $backupDir, $bzip2 = false)
+    public function __construct($host, $name, $user, $pass, $backupDir, $bzip2Path = false)
     {
         $this->backup = new MySqlBackup($backupDir);
         $this->dbConfig = array(
@@ -59,7 +59,7 @@ class MySqlDumper
         );
 
         $this->setMySqlData();
-        $this->setBzip2Compressor($bzip2);
+        $this->setBzip2Dir($bzip2Path);
     }
 
     /**
@@ -73,19 +73,21 @@ class MySqlDumper
     /**
      * Dumps mysql database into file.
      *
-     * @param bool $optimizeTable If true optimizes all database tables before dump.
-     * @param callable $fileNameFn Customises the backup filename. Callback must returns
-     *                             backup filename without extension.
+     * @param bool $optimizeTable         If true optimizes all database tables before dump.
+     * @param callable $fileNameFormatter Formats the backup filename. The callback receives two arguments
+     *                                    in following order: $host - database host name, $name - database name.
+     *                                    The callback must return filename without extension.
      *
      * @return string Dumped database filename.
+     * @throws \RuntimeException
      */
-    public function dump($optimizeTable = true, callable $fileNameFn = null)
+    public function dump($optimizeTable = true, callable $fileNameFormatter = null)
     {
         if ($optimizeTable) {
             $this->optimizeTable();
         }
 
-        $fileName = $this->prepareFileName($fileNameFn);
+        $fileName = $this->prepareFileName($fileNameFormatter);
         $command = $this->prepareMySqlCommand('mysqldump');
 
         if ($this->bzip2Dir !== null) {
@@ -139,6 +141,8 @@ class MySqlDumper
 
     /**
      * @param string $command
+     *
+     * @throws \RuntimeException
      */
     private function runProcess($command)
     {
@@ -164,16 +168,16 @@ class MySqlDumper
     }
 
     /**
-     * @param callable $fileNameFn
+     * @param callable $fileNameFormatter
      *
      * @return string The backup filename
      */
-    private function prepareFileName(callable $fileNameFn = null)
+    private function prepareFileName(callable $fileNameFormatter = null)
     {
-        if ($fileNameFn) {
-            $fileName = (string) $fileNameFn($this->dbConfig['name'], $this->dbConfig['host']);
+        if ($fileNameFormatter) {
+            $fileName = (string) $fileNameFormatter($this->dbConfig['host'], $this->dbConfig['name']);
         } else {
-            $fileName = 'db-' . $this->dbConfig['name'] . '-' . date("Y-m-d_H-i-s", time());
+            $fileName = $this->dbConfig['host'] . '-' . $this->dbConfig['name'] . '-' . date("Y-m-d_H-i-s", time());
         }
 
         return $fileName . '.sql';
@@ -208,17 +212,23 @@ class MySqlDumper
     /**
      * Sets bzip2 compressor path
      *
-     * @param bool|string $bzip2
+     * @param bool|string $path
      */
-    private function setBzip2Compressor($bzip2)
+    private function setBzip2Dir($path)
     {
         if (PHP_OS == 'WINNT') {
-            if (!empty($bzip2)) {
-                $this->bzip2Dir = str_replace('/', '\\', rtrim($bzip2, '\/') . '/');
+            if (!empty($path)) {
+                $this->bzip2Dir = str_replace('/', '\\', rtrim($path, '\/') . '/');
+
+                $bzip2 = $this->bzip2Dir . 'bzip2.exe';
+                if (!is_executable($bzip2)) {
+                    throw new \RuntimeException(sprintf(
+                            'The %s is not executable. Set proper path to bzip2 compressor directory or false.', $bzip2
+                        ));
+                }
             }
-        } elseif ($bzip2 === true) {
+        } elseif ($path === true) {
             $this->bzip2Dir = '';
         }
     }
-
 }
