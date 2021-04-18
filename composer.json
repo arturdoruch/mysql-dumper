@@ -1,7 +1,7 @@
 {
-    "name": "arturdoruch/tool-mysql-dumper",
+    "name": "arturdoruch/mysql-dumper",
     "type": "library",
-    "description": "MySql Dumper Tool",
+    "description": "MySQL dumper",
     "license": "MIT",
     "authors": [
         {
@@ -13,6 +13,8 @@
         "php": ">=5.4"
     },
     "autoload": {
-        "psr-4" : { "ArturDoruch\\Tool\\MySqlDumper\\" : "" }
+        "psr-4": {
+            "ArturDoruch\\MySqlDumper\\": ""
+        }
     }
 }

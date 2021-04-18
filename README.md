@@ -1,10 +1,10 @@
-# MySql Dumper
+# MySQL Dumper
 
-Tool for making mysql database backups with bzip2 compressor.
+Tool to backup MySQL databases with a bzip2 compressor.
 
 ### Usage
 
-Dump or resotre mysql database.
+Dump or restore MySQL database.
 
 ```php
 // To use bzip2 compressor, set the six argument to "true".
@@ -19,19 +19,19 @@ $mysqlDumper->restore($filename);
 
 Manage backup files.
 ```php
-$mysqlBackup = $mysqlDumper->getBackup();
+$backupManager = $mysqlDumper->getBackupManager();
 
 // Get all backups by default sorted by create date. 
-$mysqlBackup->all();
+$backupManager->all();
 
 // Get all backups sorted with custom order
-$mysqlBackup->all(function ($a, $b) {
-        return $a->getFilename() > $b->getFilename();
-    });
+$backupManager->all(function ($a, $b) {
+    return $a->getFilename() > $b->getFilename();
+});
 
 // Remove the backup file
-$mysqlBackup->remove($filename);
+$backupManager->remove($filename);
 
 // Removes all backups excepts the newest 5 backups.
-$mysqlBackup->removeOld(5)
+$backupManager->removeOld(5)
 ```
