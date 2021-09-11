@@ -36,21 +36,20 @@ class MySqlDumper
     /**
      * @var MySqlBackupManager
      */
-    private $manager;
+    private $backupManager;
 
     /**
-     * @param string $host           The database host.
-     * @param string $name           The database name.
-     * @param string $user           The database user name.
-     * @param string $pass           The database password.
-     * @param string $backupDir      Path to the backup directory.
-     * @param bool|string $bzip2Path If you want to compress dumped sql file with bzip2 compressor pass:
-     *                               - on windows the path to bzip compressor directory,
-     *                               - on linux and other OS true value.
+     * @param string $host       The database host.
+     * @param string $name       The database name.
+     * @param string $user       The database username.
+     * @param string $pass       The database password.
+     * @param string $backupDir  Path to the backup directory.
+     * @param bool|string $bzip2 Sets the bzip2 compressor to compress dumped SQL file.
+     *                           On Windows the path to the compressor directory. On Linux and other OS true value.
      */
-    public function __construct($host, $name, $user, $pass, $backupDir, $bzip2Path = false)
+    public function __construct($host, $name, $user, $pass, $backupDir, $bzip2 = false)
     {
-        $this->manager = new MySqlBackupManager($backupDir);
+        $this->backupManager = new MySqlBackupManager($backupDir);
         $this->dbConfig = [
             'host' => $host,
             'name' => $name,
@@ -59,7 +58,7 @@ class MySqlDumper
         ];
 
         $this->setMySqlData();
-        $this->setBzip2Dir($bzip2Path);
+        $this->setBzip2Dir($bzip2);
     }
 
     /**
@@ -67,7 +66,7 @@ class MySqlDumper
      */
     public function getBackupManager()
     {
-        return $this->manager;
+        return $this->backupManager;
     }
 
     /**
@@ -87,7 +86,7 @@ class MySqlDumper
             $this->optimizeTable();
         }
 
-        $filename = $this->prepareFilename($filenameFormatter);
+        $filename = $this->prepareFilename($filenameFormatter) . '.sql';
         $command = $this->prepareMySqlCommand('mysqldump');
 
         if ($this->bzip2Dir !== null) {
@@ -95,11 +94,25 @@ class MySqlDumper
             $command .= ' | ' . $this->bzip2Dir . 'bzip2';
         }
 
-        $command .= ' > ' . $this->manager->getFilePath($filename);
+        $command .= ' > ' . $this->backupManager->getFilePath($filename);
 
         $this->runProcess($command);
 
         return $filename;
+    }
+
+    /**
+     * @param callable $filenameFormatter
+     *
+     * @return string The backup filename.
+     */
+    private function prepareFilename(callable $filenameFormatter = null)
+    {
+        if ($filenameFormatter) {
+            return (string) $filenameFormatter($this->dbConfig['host'], $this->dbConfig['name']);
+        }
+
+        return $this->dbConfig['host'] . '-' . $this->dbConfig['name'] . '-' . date('Ymd_His', time());
     }
 
     /**
@@ -115,7 +128,7 @@ class MySqlDumper
             throw new \InvalidArgumentException('Missing $filename argument.');
         }
 
-        if (!file_exists($path = $this->manager->getFilePath($filename))) {
+        if (!file_exists($path = $this->backupManager->getFilePath($filename))) {
             throw new \RuntimeException(sprintf('The backup file "%s" does not exist.', $filename));
         }
 
@@ -142,6 +155,16 @@ class MySqlDumper
     }
 
     /**
+     * @param string $program The CLI MySQL program name.
+     *
+     * @return string
+     */
+    private function prepareMySqlCommand($program)
+    {
+        return $this->mysqlDir . $program . $this->dbAccess;
+    }
+
+    /**
      * @param string $command
      *
      * @throws \RuntimeException
@@ -163,36 +186,10 @@ class MySqlDumper
 
         if ($exitCode > 0) {
             throw new \RuntimeException(sprintf(
-                'Process "%s" failure with code "%s". Error: "%s"',
+                'The "%s" process failed with the "%s" code. Error: "%s"',
                 $command, $exitCode, mb_convert_encoding($error, 'UTF-8', 'UTF-8')
             ));
         }
-    }
-
-    /**
-     * @param callable $filenameFormatter
-     *
-     * @return string The backup filename
-     */
-    private function prepareFilename(callable $filenameFormatter = null)
-    {
-        if ($filenameFormatter) {
-            $filename = (string) $filenameFormatter($this->dbConfig['host'], $this->dbConfig['name']);
-        } else {
-            $filename = $this->dbConfig['host'] . '-' . $this->dbConfig['name'] . '-' . date('Ymd_His', time());
-        }
-
-        return $filename . '.sql';
-    }
-
-    /**
-     * @param string $program The CLI MySQL program name.
-     *
-     * @return string
-     */
-    private function prepareMySqlCommand($program)
-    {
-        return $this->mysqlDir . $program . $this->dbAccess;
     }
 
 
@@ -212,20 +209,16 @@ class MySqlDumper
     }
 
     /**
-     * Sets bzip2 compressor path
+     * Sets bzip2 compressor path.
      *
      * @param bool|string $path
      */
     private function setBzip2Dir($path)
     {
-        if (!$path) {
-            return;
-        }
-        
-        if (PHP_OS == 'WINNT') {
+        if ($path && PHP_OS == 'WINNT') {
             $this->bzip2Dir = str_replace('/', '\\', rtrim($path, '\/') . '/');
             $bzip2 = $this->bzip2Dir . 'bzip2.exe';
-            
+
             if (!is_executable($bzip2)) {
                 throw new \RuntimeException(sprintf(
                     'The %s is not executable. Set proper path to bzip2 compressor directory or false.', $bzip2
