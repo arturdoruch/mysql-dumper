@@ -94,7 +94,7 @@ class MySqlDumper
             $command .= ' | ' . $this->bzip2Dir . 'bzip2';
         }
 
-        $command .= ' > ' . $this->backupManager->getFilePath($filename);
+        $command .= ' > ' . $this->backupManager->prepareFilePath($filename);
 
         $this->runProcess($command);
 
@@ -128,7 +128,7 @@ class MySqlDumper
             throw new \InvalidArgumentException('Missing $filename argument.');
         }
 
-        if (!file_exists($path = $this->backupManager->getFilePath($filename))) {
+        if (!file_exists($path = $this->backupManager->prepareFilePath($filename))) {
             throw new \RuntimeException(sprintf('The backup file "%s" does not exist.', $filename));
         }
 

@@ -73,7 +73,7 @@ class MySqlBackupManager
      */
     public function remove($filename)
     {
-        if (!file_exists($filePath = $this->getFilePath($filename))) {
+        if (!file_exists($filePath = $this->prepareFilePath($filename))) {
             throw new \RuntimeException(sprintf('The backup file "%s" does not exist.', $filename));
         }
 
@@ -103,7 +103,7 @@ class MySqlBackupManager
      *
      * @return string Full path to the backup file.
      */
-    public function getFilePath($filename)
+    public function prepareFilePath($filename)
     {
         return $this->backupDir . DIRECTORY_SEPARATOR . $filename;
     }
