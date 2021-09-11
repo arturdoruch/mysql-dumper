@@ -25,7 +25,15 @@ class MySqlBackupManager
             ));
         }
 
-        $this->backupDir = $backupDir;
+        $this->backupDir = realpath($backupDir);
+    }
+
+    /**
+     * @return string
+     */
+    public function getBackupDir()
+    {
+        return $this->backupDir;
     }
 
     /**
@@ -43,7 +51,6 @@ class MySqlBackupManager
         $files = new \RecursiveCallbackFilterIterator($directory, function (\SplFileInfo $file) use ($extensions) {
             return in_array($file->getExtension(), $extensions);
         });
-
         $files = iterator_to_array($files);
 
         if (!$sort) {
@@ -80,7 +87,7 @@ class MySqlBackupManager
      *
      * @param int $leave The number of backup files to not remove.
      */
-    public function removeOld($leave = 5)
+    public function removeOld($leave = 1)
     {
         $backups = $this->all();
 
